@@ -81,7 +81,7 @@ export default function Result(props: Props) {
         variant="contained"
         color="primary"
         onClick={download}
-        //  href={objectURL}
+        href={objectURL}
         component="a"
         download="triprequest.txt"
       >

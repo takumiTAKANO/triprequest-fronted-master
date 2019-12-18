@@ -7,14 +7,15 @@ import LineComp from '../components/Line';
 
 type Props = {
   data: any;
+  courseNum: number;
   onChange: (data: any) => void;
   onSubmit: (data: MoveScheduleData) => void;
 };
 
 export default function Route(props: Props) {
-  const { data, onChange, onSubmit } = props;
+  const { data, courseNum, onChange, onSubmit } = props;
   const { Course } = data.ResultSet;
-  const { Price, Route } = Course;
+  const { Price, Route } = Course[courseNum];
   const {
     timeOther,
     timeOnBoard,
@@ -42,13 +43,21 @@ export default function Route(props: Props) {
     if (price.selected !== 'true') return v;
     return price.Oneway + v;
   }, 0);
+  
+  console.log("あ",{
+    ...data,
+    ResultSet: {
+      ...data.ResultSet,
+      Course: { ...data.ResultSet.Course/*[courseNum]*/, Price },
+    },
+  })
 
   const onPriceChange = (Price: any) =>
     onChange({
       ...data,
       ResultSet: {
         ...data.ResultSet,
-        Course: { ...data.ResultSet.Course, Price },
+        Course: { ...data.ResultSet.Course/*[courseNum]*/, Price },
       },
     });
   const RouteComponents = [];

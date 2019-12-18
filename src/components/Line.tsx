@@ -65,7 +65,6 @@ export default function Line(props: Props) {
       );
     }
   })();
-
   const chargePrices = prices.filter(
     price =>
       price.kind === 'Charge' && Number(price.fromLineIndex) === lineIndex
@@ -86,9 +85,12 @@ export default function Line(props: Props) {
       return (
         <div>
           <span>座席料金：</span>
+          {console.log("l",lineIndex)}
+          {console.log("s",selectedChargePrice.index)}
           <select
             value={selectedChargePrice.index}
             onChange={e => {
+              console.log(e.target.value)
               onPriceChange(
                 modifyPrice({
                   prices,

@@ -1,4 +1,4 @@
-import qs from 'query-string';
+import *as qs from 'query-string';
 
 const KEY = 'dev_ethsuMAWdSu9';
 
@@ -32,9 +32,9 @@ export const searchRoute = (data: {
   time: string;
   searchType: string;
   sort: string;
-  teikiData: string;
+  assignTeikiSerializeData:string;
 }) => {
-  const { from, to, date, time, searchType, sort , teikiData} = data;
+  const { from, to, date, time, searchType, sort, assignTeikiSerializeData} = data;
   const queryString = qs.stringify({ 
     key: KEY,
     viaList: `${from}:${to}`,
@@ -42,34 +42,9 @@ export const searchRoute = (data: {
     time: time.replace(':', ''),
     searchType,
     sort,
-    answerCount: 1,
-    searchCount: 20,
-    assignTeikiSerializeData: teikiData
-   
-  });
-  
-  const url = `https://api.ekispert.jp/v1/json/search/course/extreme?${queryString}`;
-
-  return fetch(url, { referrerPolicy: 'no-referrer' }).then(res => res.json());
-};
-
-export const searchRoute2 = (data: {
-  from: string;
-  to: string;
-  date: string;
-  time: string;
-  searchType: string;
-  sort: string;
-}) => {
-  const { from, to, date, time, searchType, sort } = data;
-  const queryString = qs.stringify({ 
-    key: KEY,
-    viaList: `${from}:${to}`,
-    date: date.replace(/-/g, ''),
-    time: time.replace(':', ''),
-    searchType,
-    sort,
-    answerCount: 1,
+    assignTeikiSerializeData,
+    conditionDetail: "T3221233232319:F232112212000:A23121141:",
+    answerCount: 10,
     searchCount: 20,
    
   });
@@ -80,18 +55,18 @@ export const searchRoute2 = (data: {
 };
 
 export const getPass = (data: {
-  passFrom: string;
-  passTo: string;
+  from: string;
+  to: string;
   searchType: string;
   sort: string;
 }) => {
-  const { passFrom, passTo, searchType, sort } = data;
+  const { from, to, searchType, sort } = data;
   const queryString = qs.stringify({
     key: KEY,
-    viaList: `${passFrom}:${passTo}`,
+    viaList: `${from}:${to}`,
     searchType,
     sort,
-    answerCount: 1,
+    answerCount: 5,
     searchCount: 20,
   });
   const url = `https://api.ekispert.jp/v1/json/search/course/extreme?${queryString}`;

@@ -125,7 +125,7 @@ export default class DayForm extends React.PureComponent<Props, State> {
 
   render() {
     const { loading, showBusinessForm, showMoveForm } = this.state;
-    const { dayData, onChange, onSubmit } = this.props;
+    const { dayData,tripData, onChange, onSubmit } = this.props;
     const {
       date,
       schedules,
@@ -135,7 +135,7 @@ export default class DayForm extends React.PureComponent<Props, State> {
       dailyAllowanceAmount,
       dailyAllowanceDescription,
     } = dayData;
-
+   
     const isValid = accommodationAmount != null && dailyAllowanceAmount != null;
 
     return (
@@ -237,6 +237,9 @@ export default class DayForm extends React.PureComponent<Props, State> {
         <MoveScheduleFormDialog
           date={date}
           open={showMoveForm}
+        
+          tripData={tripData}
+         
           onClose={() => this.setState({ showMoveForm: false })}
           onSubmit={data => {
             onChange({ ...dayData, schedules: [...dayData.schedules, data] });

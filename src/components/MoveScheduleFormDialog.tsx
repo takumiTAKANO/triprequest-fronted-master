@@ -11,40 +11,39 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Paper from '@material-ui/core/Paper';
 import { MoveScheduleData } from '../types';
+import { TripData } from '../types';
+
 import { searchRoute } from '../lib/ekispert';
-import { searchRoute2 } from '../lib/ekispert';
-import { getPass } from '../lib/ekispert';
 import StationSearchDialog from '../components/StationSearchDialog';
 import Route from '../components/Route';
 import { checkTrain } from '../lib/rule';
 import { promised } from 'q';
 
+
 type Props = {
   date: string; // yyyy-MM-dd
   open: boolean;
+  tripData: TripData;
   onClose: () => void;
   onSubmit: (data: MoveScheduleData) => void;
 };
 
 type State = {
   loading: boolean;
-  passStart: boolean;
-  passEnd: boolean;
   isOpenStationSearchDialogForDeparture: boolean;
   isOpenStationSearchDialogForArrival: boolean;
-  isOpenStationSearchDialogForPassStart: boolean;
-  isOpenStationSearchDialogForPassEnd: boolean;
   fromText: string;
   fromCode: string;
   toText: string;
   toCode: string;
-  passFromText: string;
-  passFromCode: string;
-  passToText: string;
-  passToCode: string;
   time: string; // HH:mm
   searchType: string; // departure | arrival
   assignTeikiSerializeData: string;
+  courseNum: number;
+
+  priceNum: number;
+  timeNum: number;
+  transferNum: number;
 
   selectingTab: string; // price | time | transfer
   priceResult: any;
@@ -58,76 +57,188 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
   > {
   state: State = {
     loading: false,
-    passStart: false,
-    passEnd: false,
     isOpenStationSearchDialogForDeparture: false,
     isOpenStationSearchDialogForArrival: false,
-    isOpenStationSearchDialogForPassStart: false,
-    isOpenStationSearchDialogForPassEnd: false,
     fromText: '',
     fromCode: '',
     toText: '',
     toCode: '',
-    passFromText: '',
-    passFromCode: '',
-    passToText: '',
-    passToCode: '',
     time: '',
     searchType: 'departure',
     assignTeikiSerializeData: '',
+    courseNum: 0,
+
+    priceNum: 0,
+    timeNum: 0,
+    transferNum: 0,
 
     selectingTab: 'price',
     priceResult: null,
     timeResult: null,
     transferResult: null,
   };
-  /*}
-    pass = () => {
-      const { } = this.props;
-      const { passFromCode, passToCode, searchType } = this.state;
-      const searchData = { passFrom: passFromCode, passTo: passToCode, searchType };
-  
-      this.setState({ loading: true });
-  
-      getPass({ ...searchData, sort: 'time' })
-        .then((json) => {
-          console.log(json.ResultSet.Course.Teiki.SerializeData),
-            this.setState({
-              loading: false,
-              assignTeikiSerializeData: json.ResultSet.Course.Teiki.SerializeData
-            });
-        });
-    };
-  */
+
   search = () => {
-    const { date } = this.props;
-    const { fromCode, toCode, time, searchType, /*assignTeikiSerializeData,*/ passFromCode, passToCode, passStart,passEnd } = this.state;
-    const searchData = { from: fromCode, to: toCode, date, time, searchType, /*teikiData: assignTeikiSerializeData,*/ passFrom: passFromCode, passTo: passToCode };
+    const { tripData, date, } = this.props;
+    const {
+      jobTitle,
+      tripClass,
+      costClass,
+      startDate,
+      endDate,
+      destination,
+      maxDistance,
+    } = tripData;
+    const {
+      fromCode,
+      toCode,
+      time,
+      searchType,
+    } = this.state;
+    const searchData = { from: fromCode, to: toCode, date, time, searchType };
 
     this.setState({ loading: true });
 
-    if (passStart && passEnd) {
-      getPass({ ...searchData, sort: 'time' })
-        .then((json) => {
-          Promise.all([
-            searchRoute({ ...searchData, sort: 'price', teikiData: json.ResultSet.Course.Teiki.SerializeData }),
-            searchRoute({ ...searchData, sort: 'time', teikiData: json.ResultSet.Course.Teiki.SerializeData }),
-            searchRoute({ ...searchData, sort: 'transfer', teikiData: json.ResultSet.Course.Teiki.SerializeData }),
-          ]).then(([priceResult, timeResult, transferResult]) => {
-            this.setState({
-              loading: false,
-              priceResult,
-              timeResult,
-              transferResult,
-            });
-          });
-        });
-    }else{
-      Promise.all([
-      searchRoute2({ ...searchData, sort: 'price'}),
-      searchRoute2({ ...searchData, sort: 'time'}),
-      searchRoute2({ ...searchData, sort: 'transfer'}),
+    const getjson = (String)(localStorage.getItem("triprequest"))
+    const obj = JSON.parse(getjson);
+    const assignTeikiSerializeData = obj["assignTeikiSerializeData"]
+    Promise.all([
+      searchRoute({ ...searchData, sort: 'price', assignTeikiSerializeData }),
+      searchRoute({ ...searchData, sort: 'time', assignTeikiSerializeData }),
+      searchRoute({ ...searchData, sort: 'transfer', assignTeikiSerializeData }),
     ]).then(([priceResult, timeResult, transferResult]) => {
+
+      var isWayToNaritaAirport = ((toCode === '22392') || (toCode === '29573') || (toCode === '29574') || (toCode === '304034') || (toCode === '29110')
+        || (fromCode === '22392') || (fromCode === '29573') || (fromCode === '29574') || (fromCode === '304034') || (fromCode === '29110'));
+      var hasOnlyReservedSeats = false;
+      var isShinkansen = true;//新幹線だとグリーン不可能
+
+      (async () => {
+        for (var i = 0; i < (priceResult.ResultSet.Course).length; i++) {
+          var priceOneWayDistance = parseInt(priceResult.ResultSet.Course[i].Route.distance) / 10.0;
+          var priceCheck = true;
+          for (let priceLine of priceResult.ResultSet.Course[i].Route.Line) {
+            var priceDistanceForTheSameTrainSection = parseInt(priceLine.distance) / 10.0;
+            await checkTrain({
+              tripClass,
+              isWayToNaritaAirport,
+              distanceForTheSameTrainSection: priceDistanceForTheSameTrainSection,
+              oneWayDistance: priceOneWayDistance,
+              hasOnlyReservedSeats,
+              isShinkansen
+            }).then((trainData) => {
+              var { trainAvailableSeats } = trainData;
+              if ((JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急", "急行"]))
+                || (JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急"]))) {
+                if (priceLine.Type.detail === "shinkansen") {
+                  priceCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify(["普通車指定"])) {
+                if ((priceLine.Type.detail === "liner") || (priceLine.Typedetail === "limitedExpress")) {
+                  priceCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify([])) {
+                if ((priceLine.Type.detail === "shinkansen") || (priceLine.Type.detail === "liner") || (priceLine.Type.detail === "limitedExpress")) {
+                  priceCheck = false;
+                }
+              }
+            })
+          }
+          if (priceCheck === true) {
+            console.log("最安", i, "コース")
+            this.setState({ priceNum: i });
+            break;
+          }
+        }
+      })();
+
+      (async () => {
+        for (var i = 0; i < (timeResult.ResultSet.Course).length; i++) {
+          var timeOneWayDistance = parseInt(timeResult.ResultSet.Course[i].Route.distance) / 10.0;
+          var timeCheck = true;
+          for (let timeLine of timeResult.ResultSet.Course[i].Route.Line) {
+
+            var timeDistanceForTheSameTrainSection = parseInt(timeLine.distance) / 10.0;
+
+            await checkTrain({
+              tripClass,
+              isWayToNaritaAirport,
+              distanceForTheSameTrainSection: timeDistanceForTheSameTrainSection,
+              oneWayDistance: timeOneWayDistance,
+              hasOnlyReservedSeats,
+              isShinkansen
+            }).then((trainData) => {
+              var { trainAvailableSeats } = trainData;
+              if ((JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急", "急行"]))
+                || (JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急"]))) {
+                if (timeLine.Type.detail === "shinkansen") {
+                  timeCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify(["普通車指定"])) {
+                if ((timeLine.Type.detail === "liner") || (timeLine.Typedetail === "limitedExpress")) {
+                  timeCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify([])) {
+                if ((timeLine.Type.detail === "shinkansen") || (timeLine.Type.detail === "liner") || (timeLine.Type.detail === "limitedExpress")) {
+                  timeCheck = false;
+                }
+              }
+            })
+          }
+          if (timeCheck === true) {
+            console.log("最短", i, "コース")
+            this.setState({ timeNum: i });
+            break;
+          }
+
+        }
+      })();
+
+      (async () => {
+        for (var i = 0; i < (transferResult.ResultSet.Course).length; i++) {
+          var transferOneWayDistance = parseInt(transferResult.ResultSet.Course[i].Route.distance) / 10.0
+          var transferCheck = true;
+          for (let transferLine of transferResult.ResultSet.Course[i].Route.Line) {
+
+            var transferDistanceForTheSameTrainSection = parseInt(transferLine.distance) / 10.0;
+
+            await checkTrain({
+              tripClass,
+              isWayToNaritaAirport,
+              distanceForTheSameTrainSection: transferDistanceForTheSameTrainSection,
+              oneWayDistance: transferOneWayDistance,
+              hasOnlyReservedSeats,
+              isShinkansen
+            }).then((trainData) => {
+              var { trainAvailableSeats } = trainData;
+              if ((JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急", "急行"]))
+                || (JSON.stringify(trainAvailableSeats) === JSON.stringify(["特急"]))) {
+                if (transferLine.Type.detail === "shinkansen") {
+                  transferCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify(["普通車指定"])) {
+                if ((transferLine.Type.detail === "liner") || (transferLine.Typedetail === "limitedExpress")) {
+                  transferCheck = false;
+                }
+              }
+              else if (JSON.stringify(trainAvailableSeats) === JSON.stringify([])) {
+                if ((transferLine.Type.detail === "shinkansen") || (transferLine.Type.detail === "liner") || (transferLine.Type.detail === "limitedExpress")) {
+                  transferCheck = false;
+                }
+              }
+            })
+          } if (transferCheck === true) {
+            console.log("最少乗換", i, "コース")
+            this.setState({ transferNum: i });
+            break;
+          }
+        }
+      })();
       this.setState({
         loading: false,
         priceResult,
@@ -135,8 +246,10 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
         transferResult,
       });
     });
-    };
   };
+
+
+  //};
 
   render() {
     const { date, open, onClose, onSubmit } = this.props;
@@ -144,19 +257,15 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
       loading,
       isOpenStationSearchDialogForDeparture,
       isOpenStationSearchDialogForArrival,
-      isOpenStationSearchDialogForPassStart,
-      isOpenStationSearchDialogForPassEnd,
       fromText,
       fromCode,
       toText,
       toCode,
-      passFromText,
-      passFromCode,
-      passToText,
-      passToCode,
       time,
       searchType,
-      assignTeikiSerializeData,
+      priceNum,
+      timeNum,
+      transferNum,
 
       selectingTab,
       priceResult,
@@ -166,10 +275,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
 
     const isValid =
       fromCode !== '' && toCode !== '' && time !== '' && searchType !== '';
-/*
-    const isPassValid =
-      passFromCode !== '' && passToCode !== '' && searchType !== '';
-*/
+
     return (
       <Dialog
         fullScreen
@@ -216,34 +322,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
                   設定する
                 </Button>
               </div>
-              <div style={{ marginTop: 16 }}>
-                <label style={{ marginRight: 8 }}>定期区間：{passFromText}</label>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() =>
-                    this.setState({
-                      isOpenStationSearchDialogForPassStart
-                        : true
-                    })
-                  }
-                >
-                  設定する
-                </Button>
-                <label style={{ marginRight: 8 }}> 〜{passToText}</label>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() =>
-                    this.setState({
-                      isOpenStationSearchDialogForPassEnd
-                        : true
-                    })
-                  }
-                >
-                  設定する
-                </Button>
-              </div>
+
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <Button
@@ -288,17 +367,6 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
               marginTop: 16,
             }}
           >
-            {/*
-            <Button
-              variant="contained"
-              color="primary"
-              disabled={!isPassValid || loading}
-              onClick={this.pass}
-
-            >
-              検索する
-            </Button>
-            */}
             <Button
               variant="contained"
               color="primary"
@@ -339,13 +407,16 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
         {selectingTab === 'price' && priceResult != null && (
           <Route
             data={priceResult}
+            courseNum={priceNum}
             onChange={data => this.setState({ priceResult: data })}
+
             onSubmit={onSubmit}
           />
         )}
         {selectingTab === 'time' && timeResult != null && (
           <Route
             data={timeResult}
+            courseNum={timeNum}
             onChange={data => this.setState({ timeResult: data })}
             onSubmit={onSubmit}
           />
@@ -353,6 +424,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
         {selectingTab === 'transfer' && transferResult != null && (
           <Route
             data={transferResult}
+            courseNum={transferNum}
             onChange={data => this.setState({ transferResult: data })}
             onSubmit={onSubmit}
           />
@@ -380,40 +452,6 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
               isOpenStationSearchDialogForArrival: false,
               toCode: data.code,
               toText: data.name,
-            })
-          }
-        />
-        <StationSearchDialog
-          open={isOpenStationSearchDialogForPassStart
-          }
-          onClose={() =>
-            this.setState({
-              isOpenStationSearchDialogForPassStart: false
-            })
-          }
-          onSubmit={data =>
-            this.setState({
-              isOpenStationSearchDialogForPassStart: false,
-              passFromCode: data.code,
-              passFromText: data.name,
-              passStart: true,
-            })
-          }
-        />
-        <StationSearchDialog
-          open={isOpenStationSearchDialogForPassEnd
-          }
-          onClose={() =>
-            this.setState({
-              isOpenStationSearchDialogForPassEnd: false
-            })
-          }
-          onSubmit={data =>
-            this.setState({
-              isOpenStationSearchDialogForPassEnd: false,
-              passEnd: true,
-              passToCode: data.code,
-              passToText: data.name,
             })
           }
         />

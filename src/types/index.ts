@@ -16,6 +16,7 @@ export type DayData = {
   accommodationDescription?: string;
   dailyAllowanceAmount?: number;
   dailyAllowanceDescription?: string;
+  
 };
 
 export type AccommodationData = {
@@ -50,13 +51,13 @@ export type DailyAllowanceData = {
 };
 
 export type TrainData = {
-  hasOnlyReservedSeats: boolean;
   tripClass: string;
-  availableSeats: string;
-  distanceForTheSameTrainSection: number;
-  isShinkansen: boolean;
-  oneWayDistance: number;
   isWayToNaritaAirport: boolean;
+  oneWayDistance: number;
+  distanceForTheSameTrainSection: number;
+  hasOnlyReservedSeats: boolean;
+  isShinkansen: boolean;
+  trainAvailableSeats?: string[];
 }
 
 export type ScheduleData = BusinessScheduleData | MoveScheduleData;
@@ -74,3 +75,11 @@ export type MoveScheduleData = {
   startHour: number;
   endHour: number;
 };
+
+export type TeikiData = {
+  text: string;
+  fare: number;
+  distance: number;
+  startHour: number;
+  endHour: number;
+}
