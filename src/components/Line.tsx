@@ -11,7 +11,8 @@ export default function Line(props: Props) {
   const { lineIndex, line, prices, onPriceChange } = props;
 
   const stopStationCount = line.stopStationCount;
-  const kmDistance = Number(line.distance) / 10;
+  const kmDistance = line.Type === 'train' || line.Type.text === 'train'
+    ? Number(line.distance) / 10 : 0;//電車のみ
   const colorR = Math.floor(Number(line.Color) / 1000000);
   const colorG = Math.floor(Number(line.Color) / 1000) % 1000;
   const colorB = Number(line.Color) % 1000;
@@ -51,7 +52,8 @@ export default function Line(props: Props) {
                   fromLineIndex: String(lineIndex),
                   oldSelectedPriceIndex: selectedFarePrice.index,
                   newSelectedPriceIndex: e.target.value,
-                })
+                }),
+
               );
             }}
           >
@@ -85,12 +87,9 @@ export default function Line(props: Props) {
       return (
         <div>
           <span>座席料金：</span>
-          {console.log("l",lineIndex)}
-          {console.log("s",selectedChargePrice.index)}
           <select
             value={selectedChargePrice.index}
             onChange={e => {
-              console.log(e.target.value)
               onPriceChange(
                 modifyPrice({
                   prices,
@@ -98,7 +97,8 @@ export default function Line(props: Props) {
                   fromLineIndex: String(lineIndex),
                   oldSelectedPriceIndex: selectedChargePrice.index,
                   newSelectedPriceIndex: e.target.value,
-                })
+                }),
+
               );
             }}
           >

@@ -14,6 +14,7 @@ export const searchStation = (
   return fetch(url, { referrerPolicy: 'no-referrer' })
     .then(res => res.json())
     .then(json =>
+     
       (json.ResultSet.Point as Array<any>).map(p => ({
         type:
           typeof p.Station.Type !== 'object'
@@ -22,7 +23,9 @@ export const searchStation = (
         code: p.Station.code,
         name: p.Station.Name,
       }))
-    );
+  //   }
+  // }
+  );
 };
 
 export const searchRoute = (data: {
@@ -32,23 +35,67 @@ export const searchRoute = (data: {
   time: string;
   searchType: string;
   sort: string;
-  assignTeikiSerializeData:string;
+  assignTeikiSerializeData: string;
+  // transit: string;
 }) => {
-  const { from, to, date, time, searchType, sort, assignTeikiSerializeData} = data;
-  const queryString = qs.stringify({ 
-    key: KEY,
-    viaList: `${from}:${to}`,
-    date: date.replace(/-/g, ''),
-    time: time.replace(':', ''),
-    searchType,
-    sort,
-    assignTeikiSerializeData,
-    conditionDetail: "T3221233232319:F232112212000:A23121141:",
-    answerCount: 10,
-    searchCount: 20,
-   
-  });
-  
+  const { from, to, date, time, searchType, sort, assignTeikiSerializeData,/* transit*/ } = data;
+  // if (transit === '') {
+  var queryString = assignTeikiSerializeData === "null"
+    ? qs.stringify({
+      key: KEY,
+      viaList: `${from}:${to}`,
+      date: date.replace(/-/g, ''),
+      time: time.replace(':', ''),
+      searchType,
+      sort,
+      checkEngineVersion: false,
+      conditionDetail: "T3221233232319:F232112212000:A23121141:",
+      answerCount: 20,
+      searchCount: 20,
+    })
+    : qs.stringify({
+      key: KEY,
+      viaList: `${from}:${to}`,
+      date: date.replace(/-/g, ''),
+      time: time.replace(':', ''),
+      searchType,
+      sort,
+      assignTeikiSerializeData,
+      checkEngineVersion: false,
+      conditionDetail: "T3221233232319:F232112212000:A23121141:",
+      answerCount: 20,
+      searchCount: 20,
+    });
+  //  } else {
+    // var queryString = assignTeikiSerializeData === "null"
+    // ? qs.stringify({
+    //   key: KEY,
+    //   viaList: `${from}:${transit}:${to}`,
+    //   date: date.replace(/-/g, ''),
+    //   time: time.replace(':', ''),
+    //   searchType,
+    //   sort,
+    //   checkEngineVersion: false,
+    //   conditionDetail: "T3221233232319:F232112212000:A23121141:",
+    //   answerCount: 20,
+    //   searchCount: 20,
+    // })
+    // : qs.stringify({
+    //   key: KEY,
+    //   viaList: `${from}:${transit}:${to}`,
+    //   date: date.replace(/-/g, ''),
+    //   time: time.replace(':', ''),
+    //   searchType,
+    //   sort,
+    //   assignTeikiSerializeData,
+    //   checkEngineVersion: false,
+    //   conditionDetail: "T3221233232319:F232112212000:A23121141:",
+    //   answerCount: 20,
+    //   searchCount: 20,
+    // });
+  //  }
+
+
   const url = `https://api.ekispert.jp/v1/json/search/course/extreme?${queryString}`;
 
   return fetch(url, { referrerPolicy: 'no-referrer' }).then(res => res.json());
@@ -57,18 +104,27 @@ export const searchRoute = (data: {
 export const getPass = (data: {
   from: string;
   to: string;
-  searchType: string;
   sort: string;
+  transit: string;
 }) => {
-  const { from, to, searchType, sort } = data;
-  const queryString = qs.stringify({
-    key: KEY,
-    viaList: `${from}:${to}`,
-    searchType,
-    sort,
-    answerCount: 5,
-    searchCount: 20,
-  });
+  const { from, to, sort, transit } = data;
+  var queryString = transit === ''
+    ? qs.stringify({
+      key: KEY,
+      viaList: `${from}:${to}`,
+      sort,
+      answerCount: 5,
+      searchCount: 20,
+      time: "0700",
+    })
+    : qs.stringify({
+      key: KEY,
+      viaList: `${from}:${transit}:${to}`,
+      sort,
+      answerCount: 5,
+      searchCount: 20,
+      time: "0700",
+    })
   const url = `https://api.ekispert.jp/v1/json/search/course/extreme?${queryString}`;
 
   return fetch(url, { referrerPolicy: 'no-referrer' }).then(res => res.json());

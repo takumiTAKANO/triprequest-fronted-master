@@ -7,46 +7,107 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
-import { DayData } from '../types';
-//const XlsxPopulate = require('xlsx-populate');
+import { DayData, TripData } from '../types';
+import { exportExcel, safeDelete } from '../lib/rule';
+import { execFile } from 'child_process';
 
 
 type Props = {
   dayData: Array<DayData>;
+  tripData: TripData;
 };
 
-export default function Result(props: Props) {
-  const { dayData } = props;
-  const resultData = generateResultData(dayData);
-  const resultDataText = resultData.reduce(
-    (text, data) =>
-      `${text}${data.month},${data.date},${data.body},${data.fare},,${
-      data.accommodation
-      },,${data.dailyAllowance},,\n`,
-    ''
-  );
 
-  
-    const blob = new Blob([resultDataText], { type: 'text/plain' });
-    const objectURL = window.URL.createObjectURL(blob);
-    const download = () => {
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, 'triprequest.txt');
-      }
-    };
-  /*
- const download = () => {
-    XlsxPopulate.fromFileAsync("/Users/takumitakano/Documents/triprequest/shucho_ryohi.xlsx")
-      .then((workbook)=>{
-        workbook.sheet(0).cell("A19").value("1"),
-          //  sheet1.cell("E19").value(resultData[2]),
-          // sheet1.cell("T19").value(resultData[3]),
-          // sheet1.cell("W19").value(resultData[4]),
-          // sheet1.cell("Z19").value(resultData[5]),
-          workbook.toFileAsync("/Users/takumitakano/Documents/triprequest/shucho_ryohi.xlsx")
-      })
+export default function Result(props: Props) {
+
+  const { dayData, tripData } = props;
+  const { tripClass, fundClass, startDate, endDate, destination, reason } = tripData;
+  if (tripClass === "国内") {
+    var tripClassNew = "国内 ・ 新規";
+  } else {
+    var tripClassNew = "国外 ・ 新規";
+  }
+  const destinationAndReason = destination + " , " + reason;
+
+  var businessPersonBelong = localStorage.getItem("businessPersonBelong") === null
+    ? "" : (String)(localStorage.getItem("businessPersonBelong"));
+
+  var businessPersonStaffNumber = localStorage.getItem("businessPersonStaffNumber") === null
+    ? "" : (String)(localStorage.getItem("businessPersonStaffNumber"));
+
+  var businessPersonJobTitle = localStorage.getItem("businessPersonJobTitle") === null
+    ? "" : (String)(localStorage.getItem("businessPersonJobTitle"));
+
+  var businessPersonName = localStorage.getItem("businessPersonName") === null
+    ? "" : (String)(localStorage.getItem("businessPersonName"));
+
+  var businessPersonExtension = localStorage.getItem("businessPersonExtension") === null
+    ? "" : (String)(localStorage.getItem("businessPersonExtension"));
+
+  var businessTravelerBelong = localStorage.getItem("businessTravelerBelong") === null
+    ? "" : (String)(localStorage.getItem("businessTravelerBelong"));
+
+  var businessTravelerStaffNumber = localStorage.getItem("businessTravelerStaffNumber") === null
+    ? "" : (String)(localStorage.getItem("businessTravelerStaffNumber"));
+
+
+
+  var businessTravelerName = localStorage.getItem("businessTravelerName") === null
+    ? "" : (String)(localStorage.getItem("businessTravelerName"));
+
+  var businessTravelerExtension = localStorage.getItem("businessTravelerExtension") === null
+    ? "" : (String)(localStorage.getItem("businessTravelerExtension"));
+
+  var teikiStart = localStorage.getItem("teikiStart") === null
+    ? "" : (String)(localStorage.getItem("teikiStart"));
+
+  var teikiEnd = localStorage.getItem("teikiEnd") === null
+    ? "" : (String)(localStorage.getItem("teikiEnd"));
+
+  var businessTravelerJobTitle = ""
+  if (localStorage.getItem("businessTravelerJobTitle") === null) {
+    if (localStorage.getItem("businessPersonJobTitle") !== null) {
+      businessTravelerJobTitle = String(localStorage.getItem("businessPersonJobTitle"))
     }
-    */
+  } else {
+    businessTravelerJobTitle = String(localStorage.getItem("businessTravelerJobTitle"))
+  }
+
+
+  var isResearchPosition = false;
+  var documentFileName = "";
+
+
+  const resultList = generateResult(dayData);
+  const { getOnPlane, getOnTrain } = getOn(dayData);
+  const documentData = {
+    tripClassNew,
+    fundClass,
+    startDate,
+    endDate,
+    destinationAndReason,
+    teikiStart,
+    teikiEnd,
+    businessPersonBelong,
+    businessPersonStaffNumber,
+    businessPersonJobTitle,
+    businessPersonName,
+    businessPersonExtension,
+    businessTravelerBelong,
+    businessTravelerStaffNumber,
+    businessTravelerJobTitle,
+    businessTravelerName,
+    businessTravelerExtension,
+    resultList,
+    isResearchPosition,
+    getOnPlane,
+    getOnTrain
+  };
+
+  type DeleteFile = {
+    fileName: string;
+  }
+
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="headline">日程表</Typography>
@@ -63,7 +124,7 @@ export default function Result(props: Props) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {resultData.map(data => (
+            {resultList.map(data => (
               <TableRow key={data.month + data.date + data.body}>
                 <TableCell>{data.month}</TableCell>
                 <TableCell>{data.date}</TableCell>
@@ -80,62 +141,133 @@ export default function Result(props: Props) {
         style={{ marginTop: 16 }}
         variant="contained"
         color="primary"
-        onClick={download}
-        href={objectURL}
+        onClick={() => {
+          exportExcel(documentData)
+            .then((documentResult) => {
+              var { document, /*documentDescription*/fileName } = documentResult;
+              var document2 = String(document).split(",");
+              var message = ""
+              for (var i = 0; i < document2.length; i++) {
+                message += document2[i] + "\n"
+              }
+              message += "を提出してください。"
+              // if (documentDescription != null) {
+              //   message += "\n"+documentDescription;
+              // }
+              alert(message)
+              localStorage.setItem("fileName", String(fileName));
+              documentFileName = String(fileName);
+              window.open("./doc/" + documentFileName, "_blank")
+
+            })
+        }
+        }
         component="a"
-        download="triprequest.txt"
       >
-        ファイル保存
+        ダウンロード
       </Button>
+      <div style={{ marginTop: 16 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          component="a"
+          onClick={() => {
+            const deleteFile: DeleteFile = { fileName: documentFileName }
+            safeDelete(deleteFile)
+            alert("サーバ上のファイルを削除しました。")
+          }}
+        >
+          サーバ上のファイルを削除
+      </Button>
+        &nbsp;&nbsp;※ダウンロードした後必ず削除してください
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          component="a"
+          onClick={() => {
+            window.open("https://docs.google.com/forms/d/e/1FAIpQLSd_c5XhAYe-vNQcZjEphd_oxGFllHORfjdTdg10qOBcIS_xIA/viewform?usp=sf_link")
+          }}
+        >
+          アンケートへ
+      </Button>
+        &nbsp;&nbsp;ご回答お願いします！
+      </div>
     </div>
+
+
+
   );
+
 }
 
-type ResultData = {
+type Result = {
   month: string;
   date: string;
   body: string;
-  fare: string;
-  accommodation: string;
-  dailyAllowance: string;
+  fare: number;
+  accommodation: number;
+  dailyAllowance: number;
 };
 
-const generateResultData = (dayData: Array<DayData>): Array<ResultData> => {
-  let resultData: Array<ResultData> = [];
+
+
+const generateResult = (dayData: Array<DayData>): Array<Result> => {
+  let resultList: Array<Result> = [];
   dayData.forEach(data => {
+
     const month = data.date.slice(5, 7);
     const date = data.date.slice(8, 10);
     if (data.schedules.length === 0) {
-      resultData.push({
+      resultList.push({
         month,
         date,
         body: '日程なし',
-        fare: '',
-        accommodation: String(data.accommodationAmount),
-        dailyAllowance: String(data.dailyAllowanceAmount),
+        fare: 0,
+        accommodation: Number(data.accommodationAmount),
+        dailyAllowance: Number(data.dailyAllowanceAmount),
       });
       return;
     }
     const firstSchedule = data.schedules[0];
-    resultData.push({
+    resultList.push({
       month,
       date,
       body: firstSchedule.text,
-      fare: firstSchedule.type === 'move' ? String(firstSchedule.fare) : '',
-      accommodation: String(data.accommodationAmount),
-      dailyAllowance: String(data.dailyAllowanceAmount),
+      fare: firstSchedule.type === 'move' ? Number(firstSchedule.fare) : 0,
+      accommodation: Number(data.accommodationAmount),
+      dailyAllowance: Number(data.dailyAllowanceAmount),
     });
     for (let i = 1; i < data.schedules.length; i++) {
       let schedule = data.schedules[i];
-      resultData.push({
+      resultList.push({
         month: '',
         date: '',
         body: schedule.text,
-        fare: schedule.type === 'move' ? String(schedule.fare) : '',
-        accommodation: '',
-        dailyAllowance: '',
+        fare: schedule.type === 'move' ? Number(schedule.fare) : 0,
+        accommodation: 0,
+        dailyAllowance: 0,
       });
     }
   });
-  return resultData;
+  return resultList
 };
+
+const getOn = (dayData: Array<DayData>) => {
+  var getOnPlane = false;
+  var getOnTrain = false;
+  dayData.forEach(data => {
+    for (let i = 1; i < data.schedules.length; i++) {
+      let schedule = data.schedules[i];
+      if (schedule.type === 'move' && schedule.getOnPlane === true) {
+        getOnPlane = true;
+      }
+      if (schedule.type === 'move' && schedule.getOnTrain === true) {
+        getOnTrain = true;
+      }
+    }
+  });
+  return { getOnPlane, getOnTrain }
+};
+

@@ -21,12 +21,14 @@
   "dependencies": {
     "@material-ui/core": "^3.9.0",
     "@types/node": "^12.12.7",
+    "@types/xlsx-populate": "https://github.com/JanLoebel/types-xlsx-populate.git",
     "babel-polyfill": "^6.26.0",
+    "core-js": "3",
     "lodash": "^4.17.11",
     "query-string": "^6.2.0",
     "react": "^16.6.3",
     "react-dom": "^16.6.3",
     "react-indexed-db": "^1.0.8",
-    "xlsx-populate": "^1.20.1"
+    "xlsx": "^0.15.4"
   }
 }

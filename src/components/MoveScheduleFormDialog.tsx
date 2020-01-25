@@ -32,14 +32,18 @@ type State = {
   loading: boolean;
   isOpenStationSearchDialogForDeparture: boolean;
   isOpenStationSearchDialogForArrival: boolean;
+  // isOpenStationSearchDialogForTransit: boolean;
   fromText: string;
   fromCode: string;
   toText: string;
   toCode: string;
+  // transitText:string;
+  // transitCode:string;
   time: string; // HH:mm
   searchType: string; // departure | arrival
   assignTeikiSerializeData: string;
   courseNum: number;
+
 
   priceNum: number;
   timeNum: number;
@@ -59,10 +63,13 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
     loading: false,
     isOpenStationSearchDialogForDeparture: false,
     isOpenStationSearchDialogForArrival: false,
+    // isOpenStationSearchDialogForTransit: false,
     fromText: '',
     fromCode: '',
     toText: '',
     toCode: '',
+    // transitText:'',
+    // transitCode:'',
     time: '',
     searchType: 'departure',
     assignTeikiSerializeData: '',
@@ -72,7 +79,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
     timeNum: 0,
     transferNum: 0,
 
-    selectingTab: 'price',
+    selectingTab: 'transfer',
     priceResult: null,
     timeResult: null,
     transferResult: null,
@@ -81,27 +88,22 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
   search = () => {
     const { tripData, date, } = this.props;
     const {
-      jobTitle,
       tripClass,
-      costClass,
-      startDate,
-      endDate,
-      destination,
-      maxDistance,
     } = tripData;
     const {
       fromCode,
       toCode,
+      // transitCode,
       time,
       searchType,
+
     } = this.state;
-    const searchData = { from: fromCode, to: toCode, date, time, searchType };
+    const searchData = { from: fromCode, to: toCode, date, time, searchType, /*transit: transitCode*/ };
 
     this.setState({ loading: true });
 
-    const getjson = (String)(localStorage.getItem("triprequest"))
-    const obj = JSON.parse(getjson);
-    const assignTeikiSerializeData = obj["assignTeikiSerializeData"]
+    const assignTeikiSerializeData = (String)(localStorage.getItem("assignTeikiSerializeData"))
+
     Promise.all([
       searchRoute({ ...searchData, sort: 'price', assignTeikiSerializeData }),
       searchRoute({ ...searchData, sort: 'time', assignTeikiSerializeData }),
@@ -110,8 +112,8 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
 
       var isWayToNaritaAirport = ((toCode === '22392') || (toCode === '29573') || (toCode === '29574') || (toCode === '304034') || (toCode === '29110')
         || (fromCode === '22392') || (fromCode === '29573') || (fromCode === '29574') || (fromCode === '304034') || (fromCode === '29110'));
-      var hasOnlyReservedSeats = false;
-      var isShinkansen = true;//新幹線だとグリーン不可能
+      var hasOnlyReservedSeats = false;//あまり使われないルールなため常にfalseにしてある
+      var isShinkansen = true;//グリーン席は偉い人の身のため今回はルールから除外
 
       (async () => {
         for (var i = 0; i < (priceResult.ResultSet.Course).length; i++) {
@@ -147,10 +149,15 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
             })
           }
           if (priceCheck === true) {
-            console.log("最安", i, "コース")
-            this.setState({ priceNum: i });
-            break;
+            if (i === priceResult.ResultSet.Course.length - 1) {
+              alert("適当な最安経路が見つからないため最短か最小乗換の経路をご利用ください");
+              this.setState({ priceNum: i });
+            } else {
+              this.setState({ priceNum: i });
+              break;
+            }
           }
+
         }
       })();
 
@@ -159,7 +166,6 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
           var timeOneWayDistance = parseInt(timeResult.ResultSet.Course[i].Route.distance) / 10.0;
           var timeCheck = true;
           for (let timeLine of timeResult.ResultSet.Course[i].Route.Line) {
-
             var timeDistanceForTheSameTrainSection = parseInt(timeLine.distance) / 10.0;
 
             await checkTrain({
@@ -190,9 +196,13 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
             })
           }
           if (timeCheck === true) {
-            console.log("最短", i, "コース")
-            this.setState({ timeNum: i });
-            break;
+            if (i === timeResult.ResultSet.Course.length - 1) {
+              alert("適当な最短経路が見つからないため最安か最小乗換の経路をご利用ください");
+              this.setState({ timeNum: i });
+            } else {
+              this.setState({ timeNum: i });
+              break;
+            }
           }
 
         }
@@ -233,9 +243,13 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
               }
             })
           } if (transferCheck === true) {
-            console.log("最少乗換", i, "コース")
-            this.setState({ transferNum: i });
-            break;
+            if (i === transferResult.ResultSet.Course.length - 1) {
+              alert("適切な最少乗換の経路が存在しないため最安か最短経路をご利用ください");
+              this.setState({ transferNum: i });
+            } else {
+              this.setState({ transferNum: i });
+              break;
+            }
           }
         }
       })();
@@ -248,19 +262,19 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
     });
   };
 
-
-  //};
-
   render() {
     const { date, open, onClose, onSubmit } = this.props;
     const {
       loading,
       isOpenStationSearchDialogForDeparture,
       isOpenStationSearchDialogForArrival,
+      // isOpenStationSearchDialogForTransit,
       fromText,
       fromCode,
       toText,
       toCode,
+      // transitText,
+      // transitCode,
       time,
       searchType,
       priceNum,
@@ -274,7 +288,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
     } = this.state;
 
     const isValid =
-      fromCode !== '' && toCode !== '' && time !== '' && searchType !== '';
+      fromCode !== '' && toCode !== '' && time !== '' && searchType !== '' && fromCode !== toCode;
 
     return (
       <Dialog
@@ -282,11 +296,20 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
         open={open}
         onClose={onClose}
         TransitionComponent={Transition}
+
       >
         <AppBar style={{ position: 'relative' }}>
           <Toolbar>
             <Typography variant="h6" color="inherit" style={{ flex: 1 }}>
               {date}の移動日程追加
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => window.open("./doc/出張お助けAI利用マニュアル.pdf")}
+              >
+                利用マニュアル
+                </Button>
             </Typography>
             <Button color="inherit" onClick={onClose}>
               キャンセル
@@ -322,6 +345,18 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
                   設定する
                 </Button>
               </div>
+              {/* <div style={{ marginTop: 16 }}>
+                <label style={{ marginRight: 8 }}>経由地：{transitText}</label>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() =>
+                    this.setState({ isOpenStationSearchDialogForTransit: true })
+                  }
+                >
+                  設定する
+                </Button>
+                </div> */}
 
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -337,7 +372,7 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
                   }));
                 }}
               >
-                ↑↓
+                ↑↓出発地と目的地を入れ替え
               </Button>
             </div>
           </div>
@@ -399,17 +434,20 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
             value={selectingTab}
             onChange={(_, v) => this.setState({ selectingTab: v })}
           >
-            <Tab label="最安料金" value="price" />
-            <Tab label="最短時間" value="time" />
-            <Tab label="最小乗換" value="transfer" />
+            <Tab label="最小乗換" value="transfer"
+              disabled={transferResult !== null && transferNum === transferResult.ResultSet.Course.length - 1} />
+            <Tab label="最短時間" value="time"
+              disabled={timeResult !== null && timeNum === timeResult.ResultSet.Course.length - 1} />
+            <Tab label="最安料金" value="price"
+              disabled={priceResult !== null && priceNum === priceResult.ResultSet.Course.length - 1} />
+
           </Tabs>
         </Paper>
-        {selectingTab === 'price' && priceResult != null && (
+        {selectingTab === 'transfer' && transferResult != null && (
           <Route
-            data={priceResult}
-            courseNum={priceNum}
-            onChange={data => this.setState({ priceResult: data })}
-
+            data={transferResult}
+            courseNum={transferNum}
+            onChange={data => this.setState({ transferResult: data })}
             onSubmit={onSubmit}
           />
         )}
@@ -421,14 +459,17 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
             onSubmit={onSubmit}
           />
         )}
-        {selectingTab === 'transfer' && transferResult != null && (
+        {selectingTab === 'price' && priceResult != null && (
           <Route
-            data={transferResult}
-            courseNum={transferNum}
-            onChange={data => this.setState({ transferResult: data })}
+            data={priceResult}
+            courseNum={priceNum}
+            onChange={data => this.setState({ priceResult: data })}
+
             onSubmit={onSubmit}
           />
         )}
+
+
         <StationSearchDialog
           open={isOpenStationSearchDialogForDeparture}
           onClose={() =>
@@ -455,6 +496,19 @@ export default class MoveScheduleFormDialog extends React.PureComponent<
             })
           }
         />
+        {/* <StationSearchDialog
+          open={isOpenStationSearchDialogForTransit}
+          onClose={() =>
+            this.setState({ isOpenStationSearchDialogForTransit: false })
+          }
+          onSubmit={data =>
+            this.setState({
+              isOpenStationSearchDialogForTransit: false,
+              transitCode: data.code,
+              transitText: data.name,
+            })
+          }
+        />*/}
       </Dialog>
 
     );

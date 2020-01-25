@@ -1,10 +1,10 @@
 export type TripData = {
-  jobTitle: string;
   tripClass: string;
-  costClass: string;
+  fundClass: string;
   startDate: string;
   endDate: string;
   destination: string;
+  reason: string;
   maxDistance: number;
 };
 
@@ -72,14 +72,49 @@ export type MoveScheduleData = {
   text: string;
   fare: number;
   distance: number;
+  accommodationDistance: number;
   startHour: number;
   endHour: number;
+  getOnPlane: boolean;
+  getOnTrain: boolean;
 };
 
-export type TeikiData = {
-  text: string;
+export type DocumentData = {
+  tripClassNew: string;
+  fundClass: string;
+  startDate: string;
+  endDate: string;
+  destinationAndReason: string;
+  teikiStart: string;
+  teikiEnd: string;
+  // TeikiTransit: string;
+  businessPersonBelong: string;
+  businessPersonStaffNumber: string;
+  businessPersonJobTitle: string;
+  businessPersonName: string;
+  businessPersonExtension: string;
+  businessTravelerBelong: string;
+  businessTravelerStaffNumber: string;
+  businessTravelerJobTitle: string;
+  businessTravelerName: string;
+  businessTravelerExtension: string;
+  resultList:Array<Result>;
+  getOnPlane:boolean;
+  getOnTrain:boolean;
+  documentDescription?:string;
+  document?:string;
+  fileName?:string;
+};
+
+export type Result = {
+  month: string;
+  date: string;
+  body: string;
   fare: number;
-  distance: number;
-  startHour: number;
-  endHour: number;
+  accommodation: number;
+  dailyAllowance: number;
+};
+
+export type DeleteFile = {
+  fileName: string;
 }

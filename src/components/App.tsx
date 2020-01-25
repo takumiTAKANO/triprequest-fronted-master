@@ -3,11 +3,12 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
-import { JobTitles, TripClasses, CostClasses, InitialDayData } from '../constants';
+import { JobTitles, TripClasses, InitialDayData } from '../constants';
 import { TripData, DayData } from '../types';
 import TripForm from '../components/TripForm';
 import DayForm from '../components/DayForm';
 import Result from '../components/Result';
+import { Button } from '@material-ui/core';
 
 type Props = {};
 
@@ -24,10 +25,11 @@ export default class App extends React.PureComponent<Props, State> {
     tripData: {
       jobTitle: JobTitles[0],
       tripClass: TripClasses[0],
-      costClass: CostClasses[0],
+      fundClass: '',
       startDate: '',
       endDate: '',
       destination: '',
+      reason: '',
       maxDistance: 0,
     },
     editingDayDataIndex: 0,
@@ -55,9 +57,9 @@ export default class App extends React.PureComponent<Props, State> {
   onDayFormSubmit = (_: React.MouseEvent<any>) =>
     this.setState(state => {
       const dayData = state.dayData[state.editingDayDataIndex];
-      const dayDataDistance = dayData.schedules.reduce((distance, schedule) => {
-        if (schedule.type !== 'move') return distance;
-        return schedule.distance + distance;
+      const dayDataDistance = dayData.schedules.reduce((accommodationDistance, schedule) => {
+        if (schedule.type !== 'move') return accommodationDistance;
+        return schedule.accommodationDistance + accommodationDistance;
       }, 0);
       const maxDistance =
         dayDataDistance > state.tripData.maxDistance
@@ -100,7 +102,14 @@ export default class App extends React.PureComponent<Props, State> {
         <AppBar position="static">
           <Toolbar>
             <Typography variant="h6" color="inherit">
-              出張旅費申請
+              出張旅費申請&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <Button
+              variant="contained"
+              color="secondary"
+              onClick ={()=>window.open("./doc/出張お助けAI利用マニュアル.pdf")}
+              >
+                利用マニュアル
+                </Button>
             </Typography>
           </Toolbar>
         </AppBar>
@@ -119,7 +128,7 @@ export default class App extends React.PureComponent<Props, State> {
             onSubmit={this.onDayFormSubmit}
           />
         )}
-        {step === 3 && <Result dayData={dayData} />}
+        {step === 3 && <Result dayData={dayData} tripData={tripData} />}
       </>
     );
   }

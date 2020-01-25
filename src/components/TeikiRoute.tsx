@@ -6,15 +6,20 @@ import LineComp from '../components/Line';
 
 type Props = {
     data: any;
+    teikiStart: string;
+    teikiEnd: string;
+    teikiStartCode: string;
+    teikiEndCode: string;
     courseNum: number;
     onChange: (data: any) => void;
-    onSubmit: ()=>void;
+    onSubmit: () => void;
 };
 
 export default function TeikiRoute(props: Props) {
-    const { data, courseNum, onChange, onSubmit  } = props;
+    const { data, courseNum, onChange, onSubmit, teikiStart, teikiEnd, teikiStartCode, teikiEndCode } = props;
     const { Course } = data.ResultSet;
-    const { Price, Route } = Course[courseNum];
+    // const { Price, Route } = Course[courseNum];
+    const { Price, Route } = Course[courseNum] === undefined ? Course[0] : Course[courseNum];
     const {
         timeOther,
         timeOnBoard,
@@ -24,7 +29,10 @@ export default function TeikiRoute(props: Props) {
         Line,
         Point,
     } = Route;
-    const assignTeikiSerializeData = Course[courseNum].Teiki.SerializeData;
+    var assignTeikiSerializeData = Course[courseNum] === undefined 
+    ? (Course[0].Teiki === undefined ? '' : (String)(Course[0].Teiki.SerializeData)) 
+    : (Course[courseNum].Teiki === undefined ? '' : (String)(Course[courseNum].Teiki.SerializeData));
+
     const priceArray: Array<any> = Price.length == null ? [Price] : Price;
     const prices = priceArray.map(price => ({
         ...price,
@@ -39,19 +47,27 @@ export default function TeikiRoute(props: Props) {
     const time = Number(timeOther) + Number(timeOnBoard) + Number(timeWalk);
     const kmDistance = Number(distance) / 10;
     const sumPrice = prices.reduce((v, price) => {
-        if (/Teiki/.test(price.kind)) return v;
+        if (/*(/Teiki/.test(price.kind)!=undefined) &&*/(/Teiki/.test(price.kind))) return v;
         if (price.selected !== 'true') return v;
         return price.Oneway + v;
     }, 0);
 
     const onPriceChange = (Price: any) =>
-        onChange({
-            ...data,
-            ResultSet: {
-                ...data.ResultSet,
-                Course: { ...data.ResultSet.Course/*[courseNum]*/, Price },
-            },
-        });
+        Course[courseNum] === undefined ?
+            onChange({
+                ...data,
+                ResultSet: {
+                    ...data.ResultSet,
+                    Course: [{ ...data.ResultSet.Course[0], Price }],
+                },
+            }) :
+            onChange({
+                ...data,
+                ResultSet: {
+                    ...data.ResultSet,
+                    Course: [{ ...data.ResultSet.Course[courseNum], Price }],
+                },
+            });
     const RouteComponents = [];
     for (let i = 0; i < points.length; i++) {
         RouteComponents.push(
@@ -70,12 +86,6 @@ export default function TeikiRoute(props: Props) {
         }
     }
 
-
-   var obj ={
-       "assignTeikiSerializeData":assignTeikiSerializeData
-   }
-   var setjson = JSON.stringify(obj)
-
     return (
         <Paper style={{ width: '100%', padding: 16 }}>
             <div>
@@ -91,14 +101,21 @@ export default function TeikiRoute(props: Props) {
                 <Button
                     variant="contained"
                     color="primary"
-                    onClick={() =>{localStorage.setItem("triprequest",setjson);onSubmit()}
-                        
-                        
+                    onClick={() => {
+                        localStorage.setItem("assignTeikiSerializeData", assignTeikiSerializeData);
+                        localStorage.setItem("teikiStart", teikiStart);
+                        localStorage.setItem("teikiEnd", teikiEnd);
+                        localStorage.setItem("teikiStartCode", teikiStartCode);
+                        localStorage.setItem("teikiEndCode", teikiEndCode);
+                        onSubmit()
+                    }
+
+
                     }
                 >
                     決定
         </Button>
-        </div>
+            </div>
         </Paper>
     );
 }

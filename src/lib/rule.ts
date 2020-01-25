@@ -1,5 +1,6 @@
-import { AccommodationData, DailyAllowanceData, TrainData } from '../types';
+import { AccommodationData, DailyAllowanceData, TrainData,  DocumentData, DeleteFile } from '../types';
 
+// const KIE_SERVER_URL = 'http://cefiro.comp.ae.keio.ac.jp:8888';
 const KIE_SERVER_URL = 'http://localhost:8888';
 
 export function checkAccommodation(
@@ -43,4 +44,28 @@ export function checkTrain(
   })
     .then(res => res.json())
     .then((json: TrainData) => json);
+}
+
+export function exportExcel(
+  data: DocumentData
+): Promise<DocumentData> {
+  return fetch(`${KIE_SERVER_URL}/excel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(data),
+  })
+    .then(res => res.json())
+    .then((json: DocumentData) => json);
+}
+
+export function safeDelete(
+  data: DeleteFile
+): Promise<DeleteFile> {
+  return fetch(`${KIE_SERVER_URL}/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(data),
+  })
+    .then(res => res.json())
+    .then((json: DeleteFile) => json);
 }

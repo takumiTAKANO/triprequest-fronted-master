@@ -10,7 +10,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Paper from '@material-ui/core/Paper';
-import { TeikiData } from '../types';
+import { JobTitles } from '../constants';
 import { getPass } from '../lib/ekispert';
 import StationSearchDialog from '../components/StationSearchDialog';
 import TeikiRoute from '../components/TeikiRoute';
@@ -25,16 +25,20 @@ type State = {
     loading: boolean;
     isOpenStationSearchDialogForDeparture: boolean;
     isOpenStationSearchDialogForArrival: boolean;
+    isOpenStationSearchDialogForTransit: boolean;
     fromCode: string;
     fromText: string;
     toCode: string;
     toText: string;
-    searchType: string;//departure | arrival
+    transitCode: string;
+    transitText: string;
     assignTeikiSerializeData: string;
+
 
     selectingTab: string;
     teikiResult: any;
     teikiData: string;
+
 }
 
 export default class TeikiForm extends React.PureComponent<
@@ -45,12 +49,15 @@ export default class TeikiForm extends React.PureComponent<
         loading: false,
         isOpenStationSearchDialogForDeparture: false,
         isOpenStationSearchDialogForArrival: false,
-        fromText: '',
-        fromCode: '',
-        toText: '',
-        toCode: '',
-        searchType: 'departure',
+        isOpenStationSearchDialogForTransit: false,
+        fromText: localStorage.getItem("teikiStart") === null ? '' : String(localStorage.getItem("teikiStart")),
+        fromCode: localStorage.getItem("teikiStartCode") === null ? '' : String(localStorage.getItem("teikiStartCode")),
+        toText: localStorage.getItem("teikiEnd") === null ? '' : String(localStorage.getItem("teikiEnd")),
+        toCode: localStorage.getItem("teikiEndCode") === null ? '' : String(localStorage.getItem("teikiEndCode")),
+        transitCode: '',
+        transitText: '',
         assignTeikiSerializeData: '',
+
 
         selectingTab: '1',
         teikiResult: null,
@@ -61,9 +68,9 @@ export default class TeikiForm extends React.PureComponent<
         const {
             fromCode,
             toCode,
-            searchType
+            transitCode
         } = this.state;
-        const searchData = { from: fromCode, to: toCode, searchType };
+        const searchData = { from: fromCode, to: toCode, transit: transitCode };
 
         this.setState({ loading: true });
 
@@ -79,22 +86,22 @@ export default class TeikiForm extends React.PureComponent<
     render() {
         const { open, onClose, onSubmit } = this.props;
         const {
+
             loading,
             isOpenStationSearchDialogForDeparture,
             isOpenStationSearchDialogForArrival,
+            isOpenStationSearchDialogForTransit,
             fromText,
             fromCode,
             toText,
             toCode,
-            searchType,
-            assignTeikiSerializeData,
+            transitText,
 
             selectingTab,
             teikiResult,
-            teikiData,
         } = this.state;
 
-        const isValid = fromCode !== '' && toCode !== '' && searchType !== '';
+        const isValid = fromCode !== '' && toCode !== '' && fromCode !== toCode
 
         return (
             <Dialog
@@ -106,15 +113,24 @@ export default class TeikiForm extends React.PureComponent<
                 <AppBar style={{ position: 'relative' }}>
                     <Toolbar>
                         <Typography variant="h6" color="inherit" style={{ flex: 1 }}>
-                            定期情報の設定
-                  </Typography>
+                            定期券の設定
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <Button
+                                variant="contained"
+                                color="secondary"
+                                onClick={() => window.open("./doc/出張お助けAI利用マニュアル.pdf")}
+                            >
+                                利用マニュアル
+                </Button>
+                        </Typography>
                         <Button color="inherit" onClick={onClose}>
                             キャンセル
                   </Button>
                     </Toolbar>
                 </AppBar>
+
                 <div style={{ margin: 16 }}>
-                    <div style={{ display: 'flex' }}>
+                    <div style={styles.wrapper}>
                         <div>
                             <div>
                                 <label style={{ marginRight: 8 }}>出発地：{fromText}</label>
@@ -139,39 +155,27 @@ export default class TeikiForm extends React.PureComponent<
                                         this.setState({ isOpenStationSearchDialogForArrival: true })
                                     }
                                 >
+
+                                    設定する
+                      </Button>
+                            </div>
+                            <div style={{ marginTop: 16 }}>
+                                <label style={{ marginRight: 8 }}>経由地：{transitText}</label>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() =>
+                                        this.setState({
+                                            isOpenStationSearchDialogForTransit: true,
+                                        })
+                                    }
+                                >
                                     設定する
                       </Button>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <Button
-                                variant="contained"
-                                color="secondary"
-                                onClick={() => {
-                                    this.setState(state => ({
-                                        fromText: state.toText,
-                                        fromCode: state.toCode,
-                                        toText: state.fromText,
-                                        toCode: state.fromCode,
-                                    }));
-                                }}
-                            >
-                                ↑↓
-                    </Button>
-                        </div>
                     </div>
-                    <div style={{ marginTop: 16 }}>
-                        <TextField
-                            select
-                            SelectProps={{ native: true }}
-                            label="時間指定"
-                            value={searchType}
-                            onChange={e => this.setState({ searchType: e.target.value })}
-                        >
-                            <option value="departure">出発</option>
-                            <option value="arrival">到着</option>
-                        </TextField>
-                    </div>
+
                     <div
                         style={{
                             display: 'inline-block',
@@ -187,6 +191,33 @@ export default class TeikiForm extends React.PureComponent<
                         >
                             検索する
                   </Button>
+
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                            {/* <div style={{ marginTop: 16 }}> */}
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => {
+
+                                localStorage.removeItem("assignTeikiSerializeData"),
+                                    localStorage.removeItem("teikiStart"),
+                                    localStorage.removeItem("teikiEnd"),
+                                    localStorage.removeItem("teikiStartCode"),
+                                    localStorage.removeItem("teikiEndCode"),
+                                    this.setState({
+                                        fromCode: '',
+                                        fromText: '',
+                                        toCode: '',
+                                        toText: '',
+                                    })
+                                alert("定期情報をリセットしました。")
+
+
+                            }
+                            }
+                        >
+                            リセット
+                                 </Button>
 
                         {loading && (
                             <CircularProgress
@@ -222,7 +253,11 @@ export default class TeikiForm extends React.PureComponent<
                     <TeikiRoute
                         data={teikiResult}
                         courseNum={0}
-                        onChange={data => this.setState({ teikiResult: data})}
+                        teikiStart={fromText}
+                        teikiEnd={toText}
+                        teikiStartCode={fromCode}
+                        teikiEndCode={toCode}
+                        onChange={data => this.setState({ teikiResult: data })}
                         onSubmit={onSubmit}
                     />
                 )}
@@ -230,7 +265,11 @@ export default class TeikiForm extends React.PureComponent<
                     <TeikiRoute
                         data={teikiResult}
                         courseNum={1}
-                        onChange={data => this.setState({ teikiResult: data})}
+                        teikiStart={fromText}
+                        teikiEnd={toText}
+                        teikiStartCode={fromCode}
+                        teikiEndCode={toCode}
+                        onChange={data => this.setState({ teikiResult: data })}
                         onSubmit={onSubmit}
                     />
                 )}
@@ -238,7 +277,11 @@ export default class TeikiForm extends React.PureComponent<
                     <TeikiRoute
                         data={teikiResult}
                         courseNum={2}
-                        onChange={data => this.setState({ teikiResult: data})}
+                        teikiStart={fromText}
+                        teikiEnd={toText}
+                        teikiStartCode={fromCode}
+                        teikiEndCode={toCode}
+                        onChange={data => this.setState({ teikiResult: data })}
                         onSubmit={onSubmit}
                     />
                 )}
@@ -246,7 +289,11 @@ export default class TeikiForm extends React.PureComponent<
                     <TeikiRoute
                         data={teikiResult}
                         courseNum={3}
-                        onChange={data => this.setState({ teikiResult: data})}
+                        teikiStart={fromText}
+                        teikiEnd={toText}
+                        teikiStartCode={fromCode}
+                        teikiEndCode={toCode}
+                        onChange={data => this.setState({ teikiResult: data })}
                         onSubmit={onSubmit}
                     />
                 )}
@@ -254,7 +301,11 @@ export default class TeikiForm extends React.PureComponent<
                     <TeikiRoute
                         data={teikiResult}
                         courseNum={4}
-                        onChange={data => this.setState({ teikiResult: data})}
+                        teikiStart={fromText}
+                        teikiEnd={toText}
+                        teikiStartCode={fromCode}
+                        teikiEndCode={toCode}
+                        onChange={data => this.setState({ teikiResult: data })}
                         onSubmit={onSubmit}
                     />
                 )}
@@ -285,6 +336,19 @@ export default class TeikiForm extends React.PureComponent<
                         })
                     }
                 />
+                <StationSearchDialog
+                    open={isOpenStationSearchDialogForTransit}
+                    onClose={() =>
+                        this.setState({ isOpenStationSearchDialogForTransit: false })
+                    }
+                    onSubmit={data =>
+                        this.setState({
+                            isOpenStationSearchDialogForTransit: false,
+                            transitCode: data.code,
+                            transitText: data.name,
+                        })
+                    }
+                />
             </Dialog>
 
         );
@@ -294,3 +358,12 @@ export default class TeikiForm extends React.PureComponent<
 };
 
 const Transition = (props: any) => <Slide direction="up" {...props} />;
+
+const styles = {
+    form: {
+        margin: 16,
+    },
+    wrapper: {
+        marginTop: 16,
+    },
+};

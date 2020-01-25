@@ -11,6 +11,7 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 exports.__esModule = true;
+// const KIE_SERVER_URL = 'http://cefiro.comp.ae.keio.ac.jp:8888';
 var KIE_SERVER_URL = 'http://localhost:8888';
 function checkAccommodation(data) {
     if (data.stayClass === '日帰り' || data.stayClass === '宿泊(帰着日)') {
@@ -45,3 +46,23 @@ function checkTrain(data) {
         .then(function (json) { return json; });
 }
 exports.checkTrain = checkTrain;
+function exportExcel(data) {
+    return fetch(KIE_SERVER_URL + "/excel", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(data)
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (json) { return json; });
+}
+exports.exportExcel = exportExcel;
+function safeDelete(data) {
+    return fetch(KIE_SERVER_URL + "/delete", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(data)
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (json) { return json; });
+}
+exports.safeDelete = safeDelete;
